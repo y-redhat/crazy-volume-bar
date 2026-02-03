@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Board Angle & Car Volume Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        
+        body { 
+            background: linear-gradient(135deg, #1a237e 0%, #283593 100%); 
+            color: #e3f2fd; min-height: 100vh; padding: 20px; 
+            display: flex; justify-content: center; align-items: center; 
+        }
+        
+        .container { 
+            max-width: 900px; width: 100%; background: rgba(13, 27, 42, 0.95); 
+            border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+            border: 1px solid rgba(33, 150, 243, 0.3); 
+        }
+        
+        h1 { text-align: center; margin-bottom: 15px; color: #bb86fc; font-size: 1.8rem; }
+        .subtitle { text-align: center; color: #90caf9; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.4; }
+        
+        .simulation { 
+            background: rgba(26, 35, 47, 0.8); border-radius: 10px; padding: 20px; 
+            margin-bottom: 20px; border: 1px solid rgba(33, 150, 243, 0.2); 
+            display: flex; flex-direction: column; align-items: center; 
+        }
+        
+        .board-container { 
+            position: relative; width: 100%; height: 250px; 
+            background: linear-gradient(180deg, #0d47a1 0%, #1565c0 100%); 
+            border-radius: 8px; overflow: hidden; border: 2px solid rgba(33, 150, 243, 0.3); 
+            margin-bottom: 20px; display: flex; align-items: center; justify-content: center; 
+        }
+        
+        .board { 
+            position: absolute; width: 400px; height: 80px; 
+            background: linear-gradient(to bottom, #8d6e63, #5d4037); 
+            border: 3px solid #3e2723; border-radius: 8px; transform-origin: center center; 
+            transition: transform 0.4s ease; 
+        }
+        
+        .center-line { 
+            position: absolute; width: 400px; height: 2px; background: rgba(255, 255, 255, 0.6); 
+            top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1; pointer-events: none; 
+        }
+        
+        .car-container { 
+            position: absolute; width: 400px; height: 80px; transform-origin: center center; 
+            transition: transform 0.3s ease; z-index: 2; 
+        }
+        
+        .car-body { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            width: 40px; height: 20px; background: linear-gradient(135deg, #ff5722, #d84315); 
+            border-radius: 6px 6px 4px 4px; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); 
+        }
+        
+        .car-roof { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, calc(-50% - 7px)); 
+            width: 28px; height: 8px; background: #ff8a65; border-radius: 4px 4px 0 0; 
+        }
+        
+        .car-window { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, calc(-50% - 6px)); 
+            width: 22px; height: 5px; background: #80d8ff; border-radius: 2px; 
+        }
+        
+        .wheel { 
+            position: absolute; width: 8px; height: 8px; background: #212121; 
+            border-radius: 50%; border: 1px solid #757575; top: 50%; z-index: 1; 
+        }
+        
+        .front-wheel { left: 50%; transform: translate(calc(-50% - 12px), calc(-50% + 8px)); }
+        .back-wheel { left: 50%; transform: translate(calc(-50% + 12px), calc(-50% + 8px)); }
+        
+        .angle-control { width: 100%; margin-top: 15px; }
+        
+        .angle-display { display: flex; justify-content: space-between; margin-bottom: 8px; color: #90caf9; font-size: 0.9rem; }
+        
+        .slider { 
+            -webkit-appearance: none; width: 100%; height: 12px; 
+            background: linear-gradient(90deg, #9c27b0, #673ab7, #3f51b5, #2196f3, #03a9f4, #00bcd4, #009688, #4caf50, #8bc34a, #cddc39, #ffeb3b, #ffc107, #ff9800, #ff5722, #f44336); 
+            border-radius: 6px; outline: none; 
+        }
+        
+        .slider::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 30px; height: 30px; 
+            background: radial-gradient(circle at 30% 30%, #ffffff, #b3e5fc); 
+            border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px rgba(33, 150, 243, 0.8); 
+            border: 2px solid #0d47a1; 
+        }
+        
+        .angle-markers { display: flex; justify-content: space-between; margin-top: 5px; padding: 0 5px; }
+        .marker { color: #90caf9; font-size: 0.8rem; width: 30px; text-align: center; }
+        .center-marker { color: #ff9800; font-weight: bold; }
+        
+        .info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        @media (max-width: 768px) { .info { grid-template-columns: repeat(2, 1fr); } }
+        
+        .card { 
+            background: rgba(13, 17, 23, 0.7); border-radius: 8px; padding: 15px; 
+            border: 1px solid rgba(79, 195, 247, 0.2); text-align: center; 
+        }
+        
+        .label { font-size: 0.9rem; color: #90caf9; margin-bottom: 8px; }
+        .value { font-size: 1.6rem; font-weight: bold; color: #4fc3f7; }
+        
+        .volume { 
+            background: rgba(13, 17, 23, 0.7); border-radius: 8px; padding: 20px; 
+            margin-bottom: 20px; border: 1px solid rgba(76, 175, 80, 0.3); 
+        }
+        
+        .volume-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .volume-title { font-size: 1.1rem; color: #81c784; }
+        .volume-percent { font-size: 2.2rem; font-weight: bold; min-width: 100px; text-align: right; }
+        
+        .volume-bar-container { 
+            width: 100%; height: 25px; background: rgba(0, 0, 0, 0.4); 
+            border-radius: 12px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); 
+            position: relative; 
+        }
+        
+        .volume-center-line { 
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%); 
+            width: 2px; height: 100%; background: rgba(255, 255, 255, 0.6); z-index: 1; 
+        }
+        
+        .center-50 { 
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%); 
+            height: 100%; width: 3px; background: rgba(255, 235, 59, 0.8); z-index: 1; 
+        }
+        
+        .volume-bar { 
+            height: 100%; width: 50%; background: linear-gradient(90deg, #f44336, #ff9800, #4caf50); 
+            border-radius: 11px; transition: all 0.4s ease; position: absolute; 
+            left: 50%; top: 0; transform: translateX(-50%); 
+        }
+        
+        .volume-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.85rem; color: #b0bec5; }
+        .min { color: #ff8a80; } .mid { color: #ffeb3b; font-weight: bold; } .max { color: #69f0ae; }
+        
+        .controls { display: flex; gap: 15px; margin-top: 20px; }
+        .btn { 
+            flex: 1; padding: 12px; background: linear-gradient(135deg, #2196f3, #0d47a1); 
+            color: white; border: none; border-radius: 8px; font-size: 0.95rem; 
+            font-weight: bold; cursor: pointer; transition: all 0.2s; 
+        }
+        
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4); }
+        .reset { background: linear-gradient(135deg, #f44336, #b71c1c); }
+        .demo { background: linear-gradient(135deg, #9c27b0, #7b1fa2); }
+        
+        .footer { 
+            text-align: center; margin-top: 25px; padding-top: 15px; 
+            border-top: 1px solid rgba(255, 255, 255, 0.1); color: #90a4ae; font-size: 0.85rem; 
+        }
+        
+        .instructions { 
+            background: rgba(255, 152, 0, 0.1); border-radius: 8px; padding: 15px; 
+            margin-top: 20px; border: 1px solid rgba(255, 152, 0, 0.3); 
+            font-size: 0.9rem; color: #ffcc80; line-height: 1.5; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Board Angle & Car Volume Control</h1>
+        <p class="subtitle">Tilt board from -45° to +45°, car moves along center line, right increases volume, left decreases volume (center 50%)</p>
+        
+        <div class="simulation">
+            <div class="board-container">
+                <div class="board" id="board"></div>
+                <div class="center-line" id="centerLine"></div>
+                <div class="car-container" id="carContainer">
+                    <div class="car-body" id="carBody"></div>
+                    <div class="car-roof"></div>
+                    <div class="car-window"></div>
+                    <div class="wheel front-wheel"></div>
+                    <div class="wheel back-wheel"></div>
+                </div>
+            </div>
+            
+            <div class="angle-control">
+                <div class="angle-display">
+                    <span>Angle Range: -45° to +45°</span>
+                    <span id="currentAngle">0°</span>
+                </div>
+                <input type="range" min="-45" max="45" value="0" class="slider" id="angleSlider">
+                <div class="angle-markers">
+                    <div class="marker">-45°</div><div class="marker">-30°</div><div class="marker">-15°</div>
+                    <div class="marker center-marker">0°</div><div class="marker">15°</div><div class="marker">30°</div><div class="marker">45°</div>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <strong>Controls:</strong> Use slider to adjust board angle. Car moves along center line, right increases volume, left decreases volume. Also use keyboard ←→ keys. Center position is 50% volume.
+            </div>
+        </div>
+        
+        <div class="info">
+            <div class="card"><div class="label">Board Angle</div><div class="value" id="angleValue">0°</div></div>
+            <div class="card"><div class="label">Car Position</div><div class="value" id="carPos">Center</div></div>
+            <div class="card"><div class="label">Car Speed</div><div class="value" id="carSpeed">0.0m/s</div></div>
+            <div class="card"><div class="label">Volume</div><div class="value" id="volValue">50%</div></div>
+        </div>
+        
+        <div class="volume">
+            <div class="volume-header">
+                <div class="volume-title">Current Volume</div>
+                <div class="volume-percent" id="volPercent">50%</div>
+            </div>
+            <div class="volume-bar-container">
+                <div class="volume-center-line"></div><div class="center-50"></div>
+                <div class="volume-bar" id="volBar"></div>
+            </div>
+            <div class="volume-labels">
+                <div class="min">0%</div><div class="mid">50%</div><div class="max">100%</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn demo" id="demoBtn">Demo Play</button>
+            <button class="btn reset" id="resetBtn">Reset</button>
+        </div>
+        
+        <div class="footer">
+            <p>Open Source - Dual Direction Board Angle & Car Volume Control System</p>
+            <p>Car moves along board center line, right increases volume, left decreases volume (center 50%)</p>
+        </div>
+    </div>
+
+    <script>
+        const g = 9.8;
+        const carMass = 0.3;
+        const minAngle = -45;
+        const maxAngle = 45;
+        const boardLen = 360;
+        const carLen = 40;
+        const minVol = 0;
+        const maxVol = 100;
+        const midVol = 50;
+        
+        let angle = 0;
+        let carPos = 0;
+        let carVel = 0;
+        let demo = false;
+        let demoTimer = null;
+        
+        const board = document.getElementById('board');
+        const centerLine = document.getElementById('centerLine');
+        const carContainer = document.getElementById('carContainer');
+        const carBody = document.getElementById('carBody');
+        const angleSlider = document.getElementById('angleSlider');
+        const currentAngleText = document.getElementById('currentAngle');
+        const angleValueText = document.getElementById('angleValue');
+        const carPosText = document.getElementById('carPos');
+        const carSpeedText = document.getElementById('carSpeed');
+        const volValueText = document.getElementById('volValue');
+        const volPercentText = document.getElementById('volPercent');
+        const volBar = document.getElementById('volBar');
+        const demoBtn = document.getElementById('demoBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        function toRad(deg) {
+            return deg * Math.PI / 180;
+        }
+        
+        function update() {
+            angle = Math.max(minAngle, Math.min(maxAngle, angle));
+            
+            const rad = toRad(angle);
+            const gravity = Math.sin(rad);
+            
+            const accel = gravity * g * 0.015;
+            carVel = carVel * 0.93 + accel;
+            
+            const maxSpeed = 10;
+            if (Math.abs(carVel) > maxSpeed) {
+                carVel = carVel > 0 ? maxSpeed : -maxSpeed;
+            }
+            
+            carPos += carVel * 0.008;
+            
+            const margin = 0.05;
+            if (carPos > 1 - margin) {
+                carPos = 1 - margin;
+                carVel = -carVel * 0.3;
+            } else if (carPos < -1 + margin) {
+                carPos = -1 + margin;
+                carVel = -carVel * 0.3;
+            }
+            
+            const vol = midVol + (carPos * 50);
+            updateUI(gravity, vol);
+        }
+        
+        function updateUI(gravity, vol) {
+            const sign = angle >= 0 ? '+' : '';
+            currentAngleText.textContent = `${sign}${angle.toFixed(1)}°`;
+            angleValueText.textContent = `${sign}${angle.toFixed(1)}°`;
+            
+            const speed = Math.abs(carVel * 12);
+            carSpeedText.textContent = `${speed.toFixed(1)}m/s`;
+            
+            if (carPos > 0.6) {
+                carPosText.textContent = "Right End";
+                carPosText.style.color = "#f44336";
+            } else if (carPos > 0.3) {
+                carPosText.textContent = "Right Side";
+                carPosText.style.color = "#ff9800";
+            } else if (carPos < -0.6) {
+                carPosText.textContent = "Left End";
+                carPosText.style.color = "#2196f3";
+            } else if (carPos < -0.3) {
+                carPosText.textContent = "Left Side";
+                carPosText.style.color = "#03a9f4";
+            } else if (Math.abs(carPos) < 0.1) {
+                carPosText.textContent = "Center";
+                carPosText.style.color = "#4fc3f7";
+            } else {
+                carPosText.textContent = "Near Center";
+                carPosText.style.color = "#4fc3f7";
+            }
+            
+            const maxMove = (boardLen/2) - (carLen/2) - 10;
+            const pixelPos = carPos * maxMove;
+            
+            board.style.transform = `rotate(${angle}deg)`;
+            centerLine.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+            
+            const rad = toRad(angle);
+            const xMove = pixelPos * Math.cos(rad);
+            const yMove = pixelPos * Math.sin(rad);
+            
+            carContainer.style.transform = `
+                translate(${xMove}px, ${yMove}px)
+                rotate(${angle}deg)
+            `;
+            
+            const clampedVol = Math.max(minVol, Math.min(maxVol, Math.round(vol)));
+            volValueText.textContent = `${clampedVol}%`;
+            volPercentText.textContent = `${clampedVol}%`;
+            
+            updateVolBar(clampedVol);
+            
+            const speedInt = Math.min(Math.abs(carVel * 5), 1);
+            if (carVel > 0) {
+                const r = Math.floor(255);
+                const g = Math.floor(87 * (1 - speedInt * 0.5));
+                const b = Math.floor(34 * (1 - speedInt));
+                carBody.style.background = `linear-gradient(135deg, rgb(${r}, ${g}, ${b}), #d84315)`;
+            } else if (carVel < 0) {
+                const r = Math.floor(33 * (1 - speedInt));
+                const g = Math.floor(150 * (1 - speedInt * 0.3));
+                const b = 243;
+                carBody.style.background = `linear-gradient(135deg, rgb(${r}, ${g}, ${b}), #0d47a1)`;
+            } else {
+                carBody.style.background = `linear-gradient(135deg, #ff5722, #d84315)`;
+            }
+        }
+        
+        function updateVolBar(vol) {
+            if (vol >= midVol) {
+                const ratio = (vol - midVol) / 50;
+                const barW = ratio * 50;
+                volBar.style.width = `${barW + 50}%`;
+                volBar.style.left = "50%";
+                volBar.style.transform = "translateX(-50%)";
+                volBar.style.background = `linear-gradient(90deg, #4caf50 0%, #8bc34a 20%, #cddc39 40%, #ffeb3b 60%, #ffc107 80%, #ff9800 100%)`;
+            } else {
+                const ratio = (midVol - vol) / 50;
+                const barW = ratio * 50;
+                volBar.style.width = `${50 - barW}%`;
+                volBar.style.left = `${50 - barW}%`;
+                volBar.style.transform = "translateX(-50%)";
+                volBar.style.background = `linear-gradient(90deg, #f44336 0%, #ff5722 20%, #ff9800 40%, #ffc107 60%, #ffeb3b 80%, #cddc39 100%)`;
+                volBar.style.direction = "rtl";
+            }
+            
+            if (vol >= 80) {
+                volPercentText.style.color = "#f44336";
+                volValueText.style.color = "#f44336";
+            } else if (vol >= 60) {
+                volPercentText.style.color = "#ff9800";
+                volValueText.style.color = "#ff9800";
+            } else if (vol >= 40) {
+                volPercentText.style.color = "#ffeb3b";
+                volValueText.style.color = "#ffeb3b";
+            } else if (vol >= 20) {
+                volPercentText.style.color = "#8bc34a";
+                volValueText.style.color = "#8bc34a";
+            } else {
+                volPercentText.style.color = "#4caf50";
+                volValueText.style.color = "#4caf50";
+            }
+        }
+        
+        angleSlider.addEventListener('input', function() {
+            angle = parseInt(this.value);
+            stopDemo();
+        });
+        
+        function toggleDemo() {
+            if (demo) {
+                stopDemo();
+            } else {
+                startDemo();
+            }
+        }
+        
+        function startDemo() {
+            demo = true;
+            demoBtn.textContent = 'Demo Stop';
+            demoBtn.style.background = 'linear-gradient(135deg, #ff9800, #ef6c00)';
+            
+            let demoAngle = 0;
+            let dir = 1;
+            
+            demoTimer = setInterval(() => {
+                demoAngle += dir * 0.4;
+                
+                if (demoAngle >= maxAngle) {
+                    dir = -1;
+                    demoAngle = maxAngle;
+                } else if (demoAngle <= minAngle) {
+                    dir = 1;
+                    demoAngle = minAngle;
+                }
+                
+                angle = demoAngle;
+                angleSlider.value = angle;
+            }, 40);
+        }
+        
+        function stopDemo() {
+            if (demoTimer) {
+                clearInterval(demoTimer);
+                demoTimer = null;
+            }
+            demo = false;
+            demoBtn.textContent = 'Demo Play';
+            demoBtn.style.background = 'linear-gradient(135deg, #9c27b0, #7b1fa2)';
+        }
+        
+        function reset() {
+            angle = 0;
+            carPos = 0;
+            carVel = 0;
+            angleSlider.value = angle;
+            stopDemo();
+        }
+        
+        demoBtn.addEventListener('click', toggleDemo);
+        resetBtn.addEventListener('click', reset);
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                stopDemo();
+                
+                const step = e.shiftKey ? 5 : 1;
+                
+                if (e.key === 'ArrowLeft') {
+                    angle = Math.max(minAngle, angle - step);
+                } else if (e.key === 'ArrowRight') {
+                    angle = Math.min(maxAngle, angle + step);
+                }
+                
+                angleSlider.value = angle;
+            }
+            
+            if (e.key === ' ') {
+                e.preventDefault();
+                toggleDemo();
+            }
+            
+            if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                reset();
+            }
+            
+            if (e.key >= '0' && e.key <= '9') {
+                e.preventDefault();
+                stopDemo();
+                
+                const num = parseInt(e.key);
+                angle = (num - 5) * 9;
+                angle = Math.max(minAngle, Math.min(maxAngle, angle));
+                
+                angleSlider.value = angle;
+            }
+        });
+        
+        function loop() {
+            update();
+            requestAnimationFrame(loop);
+        }
+        
+        loop();
+        
+        setTimeout(() => {
+            const help = document.createElement('div');
+            help.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.85);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-size: 0.85rem;
+                z-index: 1000;
+                border: 1px solid rgba(33, 150, 243, 0.5);
+                text-align: center;
+                max-width: 500px;
+                animation: fadeInOut 3.5s ease forwards;
+            `;
+            help.innerHTML = `
+                <div style="color: #4fc3f7; margin-bottom: 5px; font-weight: bold;">
+                    <i class="fas fa-keyboard"></i> Keyboard Controls
+                </div>
+                <div>
+                    ←→ : Adjust Angle | Space : Demo Play/Stop<br>
+                    R : Reset | 0-9 : Set Angle (-45° to +45°)
+                </div>
+            `;
+            document.body.appendChild(help);
+            
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                    10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+                    90% { opacity: 1; transform: translateX(-50%) translateY(0); }
+                    100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            setTimeout(() => {
+                if (help.parentNode) help.remove();
+                if (style.parentNode) style.remove();
+            }, 3500);
+        }, 1000);
+    </script>
+</body>
+</html>
