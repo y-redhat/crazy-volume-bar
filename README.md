@@ -1,5 +1,4 @@
-# crazy-volume-bar
-y-redhat/crazy-volume-bar   mechanics
+https://y-redhat.github.io/crazy-volume-bar/ 
 if you are grade7+, you can understand this structure
 
 structure
